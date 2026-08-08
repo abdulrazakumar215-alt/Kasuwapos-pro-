@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasuwaPOS Pro - Point of Sale</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🛒</div>
+                <span class="sidebar-brand">KasuwaPOS</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text" data-i18n="dashboard">Dashboard</span></a></li>
+                <li class="nav-item"><a href="pos.html" class="nav-link active"><span class="nav-icon">💰</span><span class="nav-text" data-i18n="pos">Point of Sale</span></a></li>
+                <li class="nav-item"><a href="products.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text" data-i18n="products">Products</span></a></li>
+                <li class="nav-item"><a href="sales.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text" data-i18n="sales">Sales</span></a></li>
+                <li class="nav-item"><a href="customers.html" class="nav-link" id="customersNav"><span class="nav-icon">👥</span><span class="nav-text" data-i18n="customers">Customers</span></a></li>
+                <li class="nav-item"><a href="reports.html" class="nav-link" id="reportsNav"><span class="nav-icon">📈</span><span class="nav-text" data-i18n="reports">Reports</span></a></li>
+                <li class="nav-item"><a href="settings.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text" data-i18n="settings">Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="shop-info">
+                    <div class="shop-avatar" id="shopAvatar">S</div>
+                    <div>
+                        <div class="shop-name" id="shopName">Loading...</div>
+                        <div class="shop-plan" id="shopPlan">Free</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar" onclick="toggleSidebar()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h1 class="page-title" data-i18n="pos">Point of Sale</h1>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" onclick="holdSale()" title="Hold Sale"><span>⏸️</span></button>
+                    <button class="header-btn" onclick="resumeSale()" title="Resume Sale"><span>▶️</span></button>
+                    <button class="header-btn" onclick="clearCart()" title="Clear Cart"><span>🗑️</span></button>
+                </div>
+            </header>
+
+            <div class="content" style="padding: 20px;">
+                <div class="pos-container">
+                    <!-- Products Section -->
+                    <div class="pos-products">
+                        <div class="pos-products-header">
+                            <div class="search-box" style="flex: 1;">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="productSearch" placeholder="Search products..." oninput="searchProducts()">
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="scanBarcode()">
+                                <span>📷</span> Scan
+                            </button>
+                        </div>
+                        <div class="pos-categories" id="categoriesList">
+                            <button class="pos-category-btn active" onclick="filterCategory('all')">All</button>
+                        </div>
+                        <div class="pos-products-grid" id="productsGrid">
+                            <div class="empty-state">
+                                <div class="loading-spinner" style="margin: 0 auto 20px;"></div>
+                                <p>Loading products...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cart Section -->
+                    <div class="pos-cart">
+                        <div class="pos-cart-header">
+                            <h3 style="font-weight: 700;">🛒 Cart</h3>
+                            <span class="badge badge-gray" id="cartCount">0 items</span>
+                        </div>
+                        <div class="pos-cart-items" id="cartItems">
+                            <div class="empty-state" style="padding: 40px 20px;">
+                                <div class="empty-state-icon">🛒</div>
+                                <p>Cart is empty</p>
+                                <p style="font-size: 13px;">Click on a product to add</p>
+                            </div>
+                        </div>
+                        <div class="pos-cart-total">
+                            <div class="pos-total-row">
+                                <span data-i18n="subtotal">Subtotal</span>
+                                <span id="subtotal">₦0</span>
+                            </div>
+                            <div class="pos-total-row discount">
+                                <span data-i18n="discount">Discount</span>
+                                <span id="discount">₦0</span>
+                            </div>
+                            <div class="pos-total-row tax">
+                                <span data-i18n="tax">Tax</span>
+                                <span id="tax">₦0</span>
+                            </div>
+                            <div class="pos-total-row grand-total">
+                                <span data-i18n="total">Total</span>
+                                <span id="grandTotal">₦0</span>
+                            </div>
+                            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                                <button class="btn btn-outline" style="flex: 1;" onclick="showDiscountModal()">%</button>
+                                <button class="btn btn-secondary" style="flex: 3;" onclick="showCheckoutModal()" data-i18n="pay">Pay</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal-overlay" id="checkoutModal">
+        <div class="modal" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="pay">Payment</h3>
+                <button class="modal-close" onclick="closeModal('checkoutModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="font-size: 14px; color: var(--gray);" data-i18n="total">Total Amount</div>
+                    <div style="font-size: 36px; font-weight: 800; color: var(--primary);" id="checkoutTotal">₦0</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-i18n="payment">Payment Method</label>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                        <button class="btn btn-outline payment-method active" onclick="selectPayment('cash')">
+                            <span style="font-size: 24px;">💵</span>
+                            <div style="font-size: 12px; margin-top: 4px;" data-i18n="cash">Cash</div>
+                        </button>
+                        <button class="btn btn-outline payment-method" onclick="selectPayment('card')">
+                            <span style="font-size: 24px;">💳</span>
+                            <div style="font-size: 12px; margin-top: 4px;" data-i18n="card">Card</div>
+                        </button>
+                        <button class="btn btn-outline payment-method" onclick="selectPayment('transfer')">
+                            <span style="font-size: 24px;">📱</span>
+                            <div style="font-size: 12px; margin-top: 4px;" data-i18n="transfer">Transfer</div>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-i18n="amount">Amount Received</label>
+                    <input type="number" id="amountReceived" class="form-input" style="font-size: 24px; font-weight: 700; text-align: center;" oninput="calculateChange()">
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 12px; background: var(--lighter); border-radius: 8px;">
+                    <span style="font-weight: 600;" data-i18n="change">Change</span>
+                    <span style="font-weight: 800; color: var(--secondary); font-size: 18px;" id="changeAmount">₦0</span>
+                </div>
+                <div class="form-group" id="customerSelectGroup" style="display: none;">
+                    <label class="form-label" data-i18n="customer">Customer</label>
+                    <select id="customerSelect" class="form-select">
+                        <option value="">Walk-in Customer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('checkoutModal')" data-i18n="cancel">Cancel</button>
+                <button class="btn btn-secondary" onclick="completeSale()" data-i18n="pay">Complete Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-body" style="padding: 0;">
+                <div id="receiptContent" class="receipt"></div>
+            </div>
+            <div class="modal-footer" style="justify-content: center; gap: 12px;">
+                <button class="btn btn-outline" onclick="printReceipt()">
+                    <span>🖨️</span> <span data-i18n="print">Print</span>
+                </button>
+                <button class="btn btn-primary" onclick="closeModal('receiptModal'); clearCart();">
+                    <span>✅</span> <span data-i18n="newSale">New Sale</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discount Modal -->
+    <div class="modal-overlay" id="discountModal">
+        <div class="modal" style="max-width: 350px;">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="discount">Discount</h3>
+                <button class="modal-close" onclick="closeModal('discountModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Discount Type</label>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-outline discount-type active" style="flex: 1;" onclick="selectDiscountType('percentage')">%</button>
+                        <button class="btn btn-outline discount-type" style="flex: 1;" onclick="selectDiscountType('fixed')">₦</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Discount Value</label>
+                    <input type="number" id="discountValue" class="form-input" placeholder="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('discountModal')" data-i18n="cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="applyDiscount()" data-i18n="save">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/language.js"></script>
+    <script>
+        let cart = [];
+        let products = [];
+        let categories = [];
+        let selectedPayment = 'cash';
+        let discountType = 'percentage';
+        let discountValue = 0;
+        let taxRate = 0;
+        let heldSales = [];
+
+        auth.onAuthStateChanged(async user => {
+            if (!user) { window.location.href = 'auth.html'; return; }
+            currentUser = user;
+            await loadUserData();
+            await loadProducts();
+            await loadCustomers();
+        });
+
+        async function loadUserData() {
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (!userDoc.exists) return;
+            const userData = userDoc.data();
+            const shopDoc = await db.collection('shops').doc(userData.shopId).get();
+            if (!shopDoc.exists) return;
+            currentShop = { id: shopDoc.id, ...shopDoc.data() };
+
+            document.getElementById('shopName').textContent = currentShop.name;
+            document.getElementById('shopAvatar').textContent = currentShop.name.charAt(0).toUpperCase();
+            document.getElementById('shopPlan').textContent = currentShop.subscription?.plan?.toUpperCase() || 'FREE';
+            taxRate = currentShop.settings?.taxRate || 0;
+
+            if (!hasPermission('customers')) {
+                document.getElementById('customersNav').style.display = 'none';
+                document.getElementById('customerSelectGroup').style.display = 'none';
+            }
+            if (!hasPermission('reports')) {
+                document.getElementById('reportsNav').style.display = 'none';
+            }
+        }
+
+        async function loadProducts() {
+            const snapshot = await db.collection('products')
+                .where('shopId', '==', currentShop.id)
+                .get();
+
+            products = [];
+            categories = ['all'];
+
+            snapshot.forEach(doc => {
+                const product = { id: doc.id, ...doc.data() };
+                products.push(product);
+                if (product.category && !categories.includes(product.category)) {
+                    categories.push(product.category);
+                }
+            });
+
+            renderCategories();
+            renderProducts();
+        }
+
+        async function loadCustomers() {
+            if (!hasPermission('customers')) return;
+            const snapshot = await db.collection('customers')
+                .where('shopId', '==', currentShop.id)
+                .get();
+
+            const select = document.getElementById('customerSelect');
+            select.innerHTML = '<option value="">Walk-in Customer</option>';
+
+            snapshot.forEach(doc => {
+                const customer = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = customer.name + ' - ' + customer.phone;
+                select.appendChild(option);
+            });
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('categoriesList');
+            container.innerHTML = categories.map(cat => `
+                <button class="pos-category-btn ${cat === 'all' ? 'active' : ''}" onclick="filterCategory('${cat}')">
+                    ${cat === 'all' ? 'All' : cat}
+                </button>
+            `).join('');
+        }
+
+        function renderProducts(filtered = products) {
+            const grid = document.getElementById('productsGrid');
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-state-icon">📦</div>
+                        <p>No products found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(product => `
+                <div class="pos-product-card ${product.quantity <= 0 ? 'out-of-stock' : ''}" onclick="addToCart('${product.id}')">
+                    <div class="pos-product-img">${product.image || '📦'}</div>
+                    <div class="pos-product-name">${product.name}</div>
+                    <div class="pos-product-price">₦${product.price?.toLocaleString() || 0}</div>
+                    <div class="pos-product-stock">Stock: ${product.quantity || 0}</div>
+                </div>
+            `).join('');
+        }
+
+        function filterCategory(category) {
+            document.querySelectorAll('.pos-category-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (category === 'all') {
+                renderProducts();
+            } else {
+                renderProducts(products.filter(p => p.category === category));
+            }
+        }
+
+        function searchProducts() {
+            const query = document.getElementById('productSearch').value.toLowerCase();
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(query) || 
+                p.barcode?.includes(query)
+            );
+            renderProducts(filtered);
+        }
+
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || product.quantity <= 0) {
+                showToast('Product out of stock', 'warning');
+                return;
+            }
+
+            const existingItem = cart.find(item => item.id === productId);
+            if (existingItem) {
+                if (existingItem.quantity >= product.quantity) {
+                    showToast('Not enough stock', 'warning');
+                    return;
+                }
+                existingItem.quantity++;
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    cost: product.cost || 0,
+                    quantity: 1,
+                    maxStock: product.quantity
+                });
+            }
+
+            renderCart();
+            updateTotals();
+        }
+
+        function updateCartItem(productId, change) {
+            const item = cart.find(i => i.id === productId);
+            if (!item) return;
+
+            item.quantity += change;
+            if (item.quantity <= 0) {
+                cart = cart.filter(i => i.id !== productId);
+            } else if (item.quantity > item.maxStock) {
+                item.quantity = item.maxStock;
+                showToast('Maximum stock reached', 'warning');
+            }
+
+            renderCart();
+            updateTotals();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            document.getElementById('cartCount').textContent = `${cart.length} items`;
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="padding: 40px 20px;">
+                        <div class="empty-state-icon">🛒</div>
+                        <p>Cart is empty</p>
+                        <p style="font-size: 13px;">Click on a product to add</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = cart.map(item => `
+                <div class="pos-cart-item">
+                    <div class="pos-cart-item-info">
+                        <div class="pos-cart-item-name">${item.name}</div>
+                        <div class="pos-cart-item-price">₦${item.price.toLocaleString()} each</div>
+                    </div>
+                    <div class="pos-cart-qty">
+                        <button onclick="updateCartItem('${item.id}', -1)">−</button>
+                        <span>${item.quantity}</span>
+                        <button onclick="updateCartItem('${item.id}', 1)">+</button>
+                    </div>
+                    <div style="font-weight: 700; min-width: 80px; text-align: right;">
+                        ₦${(item.price * item.quantity).toLocaleString()}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateTotals() {
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            let discount = 0;
+
+            if (discountValue > 0) {
+                if (discountType === 'percentage') {
+                    discount = subtotal * (discountValue / 100);
+                } else {
+                    discount = discountValue;
+                }
+            }
+
+            const afterDiscount = Math.max(0, subtotal - discount);
+            const tax = afterDiscount * (taxRate / 100);
+            const total = afterDiscount + tax;
+
+            document.getElementById('subtotal').textContent = '₦' + subtotal.toLocaleString();
+            document.getElementById('discount').textContent = '₦' + discount.toLocaleString();
+            document.getElementById('tax').textContent = '₦' + tax.toLocaleString();
+            document.getElementById('grandTotal').textContent = '₦' + total.toLocaleString();
+        }
+
+        function clearCart() {
+            cart = [];
+            discountValue = 0;
+            renderCart();
+            updateTotals();
+        }
+
+        function holdSale() {
+            if (cart.length === 0) {
+                showToast('Cart is empty', 'warning');
+                return;
+            }
+            heldSales.push([...cart]);
+            clearCart();
+            showToast('Sale held successfully', 'success');
+        }
+
+        function resumeSale() {
+            if (heldSales.length === 0) {
+                showToast('No held sales', 'info');
+                return;
+            }
+            cart = heldSales.pop();
+            renderCart();
+            updateTotals();
+            showToast('Sale resumed', 'success');
+        }
+
+        function showDiscountModal() {
+            if (cart.length === 0) {
+                showToast('Cart is empty', 'warning');
+                return;
+            }
+            document.getElementById('discountModal').classList.add('active');
+        }
+
+        function selectDiscountType(type) {
+            discountType = type;
+            document.querySelectorAll('.discount-type').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function applyDiscount() {
+            discountValue = parseFloat(document.getElementById('discountValue').value) || 0;
+            updateTotals();
+            closeModal('discountModal');
+            showToast('Discount applied', 'success');
+        }
+
+        function showCheckoutModal() {
+            if (cart.length === 0) {
+                showToast('Cart is empty', 'warning');
+                return;
+            }
+            const total = document.getElementById('grandTotal').textContent;
+            document.getElementById('checkoutTotal').textContent = total;
+            document.getElementById('amountReceived').value = '';
+            document.getElementById('changeAmount').textContent = '₦0';
+            document.getElementById('checkoutModal').classList.add('active');
+        }
+
+        function selectPayment(method) {
+            selectedPayment = method;
+            document.querySelectorAll('.payment-method').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function calculateChange() {
+            const received = parseFloat(document.getElementById('amountReceived').value) || 0;
+            const totalText = document.getElementById('grandTotal').textContent.replace(/[₦,]/g, '');
+            const total = parseFloat(totalText) || 0;
+            const change = Math.max(0, received - total);
+            document.getElementById('changeAmount').textContent = '₦' + change.toLocaleString();
+        }
+
+        async function completeSale() {
+            if (cart.length === 0) return;
+
+            const totalText = document.getElementById('grandTotal').textContent.replace(/[₦,]/g, '');
+            const total = parseFloat(totalText) || 0;
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const discount = parseFloat(document.getElementById('discount').textContent.replace(/[₦,]/g, '')) || 0;
+            const tax = parseFloat(document.getElementById('tax').textContent.replace(/[₦,]/g, '')) || 0;
+
+            const customerId = document.getElementById('customerSelect').value;
+            const customerName = customerId ? document.getElementById('customerSelect').selectedOptions[0].text.split(' - ')[0] : 'Walk-in';
+
+            try {
+                // Create sale record
+                const saleRef = db.collection('sales').doc();
+                await saleRef.set({
+                    shopId: currentShop.id,
+                    items: cart.map(item => ({
+                        productId: item.id,
+                        name: item.name,
+                        price: item.price,
+                        cost: item.cost,
+                        quantity: item.quantity,
+                        total: item.price * item.quantity
+                    })),
+                    subtotal: subtotal,
+                    discount: discount,
+                    tax: tax,
+                    total: total,
+                    paymentMethod: selectedPayment,
+                    customerId: customerId || null,
+                    customerName: customerName,
+                    cashierId: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Update product stock
+                for (const item of cart) {
+                    await db.collection('products').doc(item.id).update({
+                        quantity: firebase.firestore.FieldValue.increment(-item.quantity)
+                    });
+                }
+
+                // Update customer stats if applicable
+                if (customerId) {
+                    await db.collection('customers').doc(customerId).update({
+                        totalPurchases: firebase.firestore.FieldValue.increment(total),
+                        lastPurchase: firebase.firestore.FieldValue.serverTimestamp(),
+                        visitCount: firebase.firestore.FieldValue.increment(1)
+                    });
+                }
+
+                closeModal('checkoutModal');
+                showReceipt(saleRef.id, total, customerName);
+                showToast('Sale completed successfully!', 'success');
+
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        function showReceipt(saleId, total, customerName) {
+            const receiptContent = document.getElementById('receiptContent');
+            const now = new Date();
+            const itemsHtml = cart.map(item => `
+                <div class="receipt-item">
+                    <span class="receipt-item-name">${item.name}</span>
+                    <span class="receipt-item-qty">${item.quantity}x</span>
+                    <span>₦${(item.price * item.quantity).toLocaleString()}</span>
+                </div>
+            `).join('');
+
+            receiptContent.innerHTML = `
+                <div class="receipt-header">
+                    <h2>${currentShop.name}</h2>
+                    <p>${currentShop.address || ''}</p>
+                    <p>Tel: ${currentShop.phone || ''}</p>
+                    <p>${now.toLocaleString()}</p>
+                </div>
+                <div class="receipt-items">
+                    ${itemsHtml}
+                </div>
+                <div class="receipt-totals">
+                    <div class="receipt-total-row">
+                        <span>Subtotal</span>
+                        <span>₦${document.getElementById('subtotal').textContent.replace('₦', '')}</span>
+                    </div>
+                    <div class="receipt-total-row">
+                        <span>Discount</span>
+                        <span>₦${document.getElementById('discount').textContent.replace('₦', '')}</span>
+                    </div>
+                    <div class="receipt-total-row">
+                        <span>Tax</span>
+                        <span>₦${document.getElementById('tax').textContent.replace('₦', '')}</span>
+                    </div>
+                    <div class="receipt-total-row grand">
+                        <span>TOTAL</span>
+                        <span>₦${total.toLocaleString()}</span>
+                    </div>
+                    <div class="receipt-total-row">
+                        <span>Payment</span>
+                        <span>${selectedPayment.toUpperCase()}</span>
+                    </div>
+                </div>
+                <div class="receipt-footer">
+                    <p>Transaction: #${saleId.slice(-6).toUpperCase()}</p>
+                    <p>Customer: ${customerName}</p>
+                    <p style="margin-top: 10px; font-weight: 700;">Thank You!</p>
+                    <p>Please Visit Again</p>
+                    <p style="margin-top: 10px; font-size: 10px;">${currentShop.settings?.receiptFooter || 'Thank you for your business!'}</p>
+                </div>
+            `;
+
+            document.getElementById('receiptModal').classList.add('active');
+        }
+
+        function printReceipt() {
+            window.print();
+        }
+
+        function scanBarcode() {
+            showToast('Barcode scanner coming soon', 'info');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span style="font-size: 20px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+    </script>
+</body>
+</html>

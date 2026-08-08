@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasuwaPOS Pro - Settings</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🛒</div>
+                <span class="sidebar-brand">KasuwaPOS</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text" data-i18n="dashboard">Dashboard</span></a></li>
+                <li class="nav-item"><a href="pos.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text" data-i18n="pos">Point of Sale</span></a></li>
+                <li class="nav-item"><a href="products.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text" data-i18n="products">Products</span></a></li>
+                <li class="nav-item"><a href="sales.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text" data-i18n="sales">Sales</span></a></li>
+                <li class="nav-item"><a href="customers.html" class="nav-link" id="customersNav"><span class="nav-icon">👥</span><span class="nav-text" data-i18n="customers">Customers</span></a></li>
+                <li class="nav-item"><a href="reports.html" class="nav-link" id="reportsNav"><span class="nav-icon">📈</span><span class="nav-text" data-i18n="reports">Reports</span></a></li>
+                <li class="nav-item"><a href="settings.html" class="nav-link active"><span class="nav-icon">⚙️</span><span class="nav-text" data-i18n="settings">Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="shop-info">
+                    <div class="shop-avatar" id="shopAvatar">S</div>
+                    <div>
+                        <div class="shop-name" id="shopName">Loading...</div>
+                        <div class="shop-plan" id="shopPlan">Free</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar" onclick="toggleSidebar()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h1 class="page-title" data-i18n="settings">Settings</h1>
+                </div>
+            </header>
+
+            <div class="content">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <div class="card">
+                        <h3 class="card-title" data-i18n="shopSettings">Shop Settings</h3>
+                        <form id="shopSettingsForm">
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="shopName">Shop Name</label>
+                                <input type="text" id="settingShopName" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="phone">Phone</label>
+                                <input type="tel" id="settingPhone" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="address">Address</label>
+                                <textarea id="settingAddress" class="form-textarea" rows="3"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="saveShopSettings()" data-i18n="save">Save</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title" data-i18n="receiptSettings">Receipt Settings</h3>
+                        <form id="receiptSettingsForm">
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="taxRate">Tax Rate (%)</label>
+                                <input type="number" id="settingTaxRate" class="form-input" min="0" max="100" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="currency">Currency</label>
+                                <input type="text" id="settingCurrency" class="form-input" value="₦">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="receiptFooter">Receipt Footer</label>
+                                <textarea id="settingReceiptFooter" class="form-textarea" rows="2"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="saveReceiptSettings()" data-i18n="save">Save</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title" data-i18n="subscription">Subscription</h3>
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 14px; color: var(--gray);" data-i18n="currentPlan">Current Plan</div>
+                            <div style="font-size: 32px; font-weight: 800; color: var(--primary); text-transform: uppercase;" id="currentPlanDisplay">FREE</div>
+                            <div style="font-size: 14px; color: var(--gray); margin-top: 8px;" id="planExpiry">No expiry</div>
+
+                            <div style="margin-top: 24px; text-align: left;">
+                                <div style="margin-bottom: 12px; padding: 12px; background: var(--lighter); border-radius: 8px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>Products</span>
+                                        <span id="planProducts">50 max</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>Users</span>
+                                        <span id="planUsers">1 max</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>Reports</span>
+                                        <span id="planReports">❌</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>Customers</span>
+                                        <span id="planCustomers">❌</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary" style="width: 100%; margin-top: 16px;" onclick="upgradePlan()" data-i18n="upgrade">Upgrade Plan</button>
+                        </div>
+                    </div>
+
+                    <div class="card" id="staffCard">
+                        <h3 class="card-title" data-i18n="staff">Staff Management</h3>
+                        <div id="staffList" style="margin-bottom: 16px;"></div>
+                        <button class="btn btn-outline" style="width: 100%;" onclick="showAddStaffModal()" data-i18n="addStaff">Add Staff</button>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title" data-i18n="language">Language & Theme</h3>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="language">Language</label>
+                            <select class="form-select" id="languageSelect" onchange="changeLanguage()">
+                                <option value="en">English</option>
+                                <option value="ha">Hausa</option>
+                                <option value="ar">العربية</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="darkMode">Dark Mode</label>
+                            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                                <input type="checkbox" id="darkModeToggle" onchange="toggleDarkModeFromSettings()">
+                                <span>Enable Dark Mode</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="staffModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="addStaff">Add Staff</h3>
+                <button class="modal-close" onclick="closeModal('staffModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Staff Email</label>
+                    <input type="email" id="staffEmail" class="form-input" placeholder="staff@email.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-i18n="role">Role</label>
+                    <select id="staffRole" class="form-select">
+                        <option value="cashier">Cashier (POS only)</option>
+                        <option value="staff">Staff (POS + Sales view)</option>
+                        <option value="manager">Manager (Full access except settings)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('staffModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addStaff()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/language.js"></script>
+    <script>
+        auth.onAuthStateChanged(async user => {
+            if (!user) { window.location.href = 'auth.html'; return; }
+            currentUser = user;
+            await loadUserData();
+            await loadSettings();
+        });
+
+        async function loadUserData() {
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (!userDoc.exists) return;
+            const userData = userDoc.data();
+            const shopDoc = await db.collection('shops').doc(userData.shopId).get();
+            if (!shopDoc.exists) return;
+            currentShop = { id: shopDoc.id, ...shopDoc.data() };
+
+            document.getElementById('shopName').textContent = currentShop.name;
+            document.getElementById('shopAvatar').textContent = currentShop.name.charAt(0).toUpperCase();
+            document.getElementById('shopPlan').textContent = currentShop.subscription?.plan?.toUpperCase() || 'FREE';
+
+            if (!hasPermission('customers')) document.getElementById('customersNav').style.display = 'none';
+            if (!hasPermission('reports')) document.getElementById('reportsNav').style.display = 'none';
+
+            if (currentShop.ownerId !== currentUser.uid) {
+                document.getElementById('staffCard').style.display = 'none';
+            }
+        }
+
+        async function loadSettings() {
+            document.getElementById('settingShopName').value = currentShop.name || '';
+            document.getElementById('settingPhone').value = currentShop.phone || '';
+            document.getElementById('settingAddress').value = currentShop.address || '';
+            document.getElementById('settingTaxRate').value = currentShop.settings?.taxRate || 0;
+            document.getElementById('settingCurrency').value = currentShop.settings?.currency || '₦';
+            document.getElementById('settingReceiptFooter').value = currentShop.settings?.receiptFooter || '';
+
+            const plan = currentShop.subscription?.plan || 'free';
+            const planConfig = SUBSCRIPTION_PLANS[plan];
+            document.getElementById('currentPlanDisplay').textContent = plan;
+
+            const expiry = currentShop.subscription?.expiryDate?.toDate?.();
+            document.getElementById('planExpiry').textContent = expiry ? 'Expires: ' + expiry.toLocaleDateString() : 'No expiry';
+
+            const features = planConfig.features;
+            document.getElementById('planProducts').textContent = features.maxProducts === -1 ? 'Unlimited' : features.maxProducts + ' max';
+            document.getElementById('planUsers').textContent = features.maxUsers === -1 ? 'Unlimited' : features.maxUsers + ' max';
+            document.getElementById('planReports').textContent = features.reports ? '✅' : '❌';
+            document.getElementById('planCustomers').textContent = features.customers ? '✅' : '❌';
+
+            document.getElementById('languageSelect').value = currentLang;
+            document.getElementById('darkModeToggle').checked = document.documentElement.getAttribute('data-theme') === 'dark';
+
+            await loadStaff();
+        }
+
+        async function loadStaff() {
+            const staffList = document.getElementById('staffList');
+            const staff = currentShop.staff || {};
+
+            if (Object.keys(staff).length <= 1) {
+                staffList.innerHTML = '<p style="color: var(--gray); text-align: center;">No additional staff members</p>';
+                return;
+            }
+
+            staffList.innerHTML = Object.entries(staff).map(([uid, data]) => {
+                if (uid === currentShop.ownerId) return '';
+                return `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--lighter); border-radius: 8px; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-weight: 600;">${data.name || uid.slice(0, 8)}</div>
+                            <div style="font-size: 12px; color: var(--gray); text-transform: uppercase;">${data.role}</div>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" onclick="removeStaff('${uid}')">🗑️</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function saveShopSettings() {
+            try {
+                await db.collection('shops').doc(currentShop.id).update({
+                    name: document.getElementById('settingShopName').value,
+                    phone: document.getElementById('settingPhone').value,
+                    address: document.getElementById('settingAddress').value
+                });
+                showToast('Shop settings saved', 'success');
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function saveReceiptSettings() {
+            try {
+                await db.collection('shops').doc(currentShop.id).update({
+                    'settings.taxRate': parseFloat(document.getElementById('settingTaxRate').value) || 0,
+                    'settings.currency': document.getElementById('settingCurrency').value,
+                    'settings.receiptFooter': document.getElementById('settingReceiptFooter').value
+                });
+                showToast('Receipt settings saved', 'success');
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        function upgradePlan() {
+            window.location.href = '../index.html#pricing';
+        }
+
+        function showAddStaffModal() {
+            const features = getPlanFeatures(currentShop.subscription?.plan || 'free');
+            const currentStaff = Object.keys(currentShop.staff || {}).length;
+
+            if (features.maxUsers !== -1 && currentStaff >= features.maxUsers) {
+                showToast('Staff limit reached. Upgrade your plan.', 'warning');
+                return;
+            }
+
+            document.getElementById('staffModal').classList.add('active');
+        }
+
+        async function addStaff() {
+            const email = document.getElementById('staffEmail').value.trim();
+            const role = document.getElementById('staffRole').value;
+
+            if (!email) {
+                showToast('Email is required', 'error');
+                return;
+            }
+
+            showToast('Staff invitation feature coming soon. Please contact support.', 'info');
+            closeModal('staffModal');
+        }
+
+        async function removeStaff(uid) {
+            if (!confirm('Remove this staff member?')) return;
+            try {
+                await db.collection('shops').doc(currentShop.id).update({
+                    [`staff.${uid}`]: firebase.firestore.FieldValue.delete()
+                });
+                showToast('Staff removed', 'success');
+                await loadUserData();
+                await loadStaff();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        function changeLanguage() {
+            const lang = document.getElementById('languageSelect').value;
+            setLanguage(lang);
+            showToast('Language changed', 'success');
+        }
+
+        function toggleDarkModeFromSettings() {
+            const isDark = document.getElementById('darkModeToggle').checked;
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('pos_dark_mode', isDark);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span style="font-size: 20px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+    </script>
+</body>
+</html>

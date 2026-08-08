@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasuwaPOS Pro - Sales</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🛒</div>
+                <span class="sidebar-brand">KasuwaPOS</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text" data-i18n="dashboard">Dashboard</span></a></li>
+                <li class="nav-item"><a href="pos.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text" data-i18n="pos">Point of Sale</span></a></li>
+                <li class="nav-item"><a href="products.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text" data-i18n="products">Products</span></a></li>
+                <li class="nav-item"><a href="sales.html" class="nav-link active"><span class="nav-icon">🛒</span><span class="nav-text" data-i18n="sales">Sales</span></a></li>
+                <li class="nav-item"><a href="customers.html" class="nav-link" id="customersNav"><span class="nav-icon">👥</span><span class="nav-text" data-i18n="customers">Customers</span></a></li>
+                <li class="nav-item"><a href="reports.html" class="nav-link" id="reportsNav"><span class="nav-icon">📈</span><span class="nav-text" data-i18n="reports">Reports</span></a></li>
+                <li class="nav-item"><a href="settings.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text" data-i18n="settings">Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="shop-info">
+                    <div class="shop-avatar" id="shopAvatar">S</div>
+                    <div>
+                        <div class="shop-name" id="shopName">Loading...</div>
+                        <div class="shop-plan" id="shopPlan">Free</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar" onclick="toggleSidebar()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h1 class="page-title" data-i18n="sales">Sales History</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-outline" onclick="exportSales()">
+                        <span>📥</span> <span data-i18n="export">Export</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
+                    <div class="search-box" style="flex: 1; min-width: 250px;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="saleSearch" placeholder="Search sales..." oninput="searchSales()">
+                    </div>
+                    <input type="date" id="dateFrom" class="form-input" style="width: auto;" onchange="filterSales()">
+                    <input type="date" id="dateTo" class="form-input" style="width: auto;" onchange="filterSales()">
+                    <select class="form-select" id="paymentFilter" style="width: auto;" onchange="filterSales()">
+                        <option value="">All Payments</option>
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="transfer">Transfer</option>
+                    </select>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="transactionId">Transaction ID</th>
+                                    <th data-i18n="date">Date</th>
+                                    <th data-i18n="customer">Customer</th>
+                                    <th data-i18n="items">Items</th>
+                                    <th data-i18n="subtotal">Subtotal</th>
+                                    <th data-i18n="discount">Discount</th>
+                                    <th data-i18n="total">Total</th>
+                                    <th data-i18n="payment">Payment</th>
+                                    <th data-i18n="actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTable">
+                                <tr><td colspan="9" style="text-align: center; padding: 40px;" data-i18n="loading">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Sale Detail Modal -->
+    <div class="modal-overlay" id="saleDetailModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Sale Details</h3>
+                <button class="modal-close" onclick="closeModal('saleDetailModal')">✕</button>
+            </div>
+            <div class="modal-body" id="saleDetailContent"></div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="printSaleReceipt()">
+                    <span>🖨️</span> Print
+                </button>
+                <button class="btn btn-ghost" onclick="closeModal('saleDetailModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/language.js"></script>
+    <script>
+        let sales = [];
+        let currentSaleId = null;
+
+        auth.onAuthStateChanged(async user => {
+            if (!user) { window.location.href = 'auth.html'; return; }
+            currentUser = user;
+            await loadUserData();
+            await loadSales();
+        });
+
+        async function loadUserData() {
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (!userDoc.exists) return;
+            const userData = userDoc.data();
+            const shopDoc = await db.collection('shops').doc(userData.shopId).get();
+            if (!shopDoc.exists) return;
+            currentShop = { id: shopDoc.id, ...shopDoc.data() };
+            document.getElementById('shopName').textContent = currentShop.name;
+            document.getElementById('shopAvatar').textContent = currentShop.name.charAt(0).toUpperCase();
+            document.getElementById('shopPlan').textContent = currentShop.subscription?.plan?.toUpperCase() || 'FREE';
+            if (!hasPermission('customers')) document.getElementById('customersNav').style.display = 'none';
+            if (!hasPermission('reports')) document.getElementById('reportsNav').style.display = 'none';
+        }
+
+        async function loadSales() {
+            const snapshot = await db.collection('sales')
+                .where('shopId', '==', currentShop.id)
+                .orderBy('createdAt', 'desc')
+                .limit(100)
+                .get();
+
+            sales = [];
+            snapshot.forEach(doc => sales.push({ id: doc.id, ...doc.data() }));
+            renderSales();
+        }
+
+        function renderSales(filtered = sales) {
+            const tbody = document.getElementById('salesTable');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 40px;" data-i18n="noData">No sales found</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(sale => {
+                const date = sale.createdAt?.toDate?.() || new Date(sale.createdAt);
+                return `
+                    <tr>
+                        <td><span class="badge badge-gray">#${sale.id.slice(-6).toUpperCase()}</span></td>
+                        <td>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</td>
+                        <td>${sale.customerName || 'Walk-in'}</td>
+                        <td>${(sale.items || []).length} items</td>
+                        <td>₦${(sale.subtotal || 0).toLocaleString()}</td>
+                        <td style="color: var(--secondary);">₦${(sale.discount || 0).toLocaleString()}</td>
+                        <td style="font-weight: 700;">₦${(sale.total || 0).toLocaleString()}</td>
+                        <td><span class="badge badge-primary">${sale.paymentMethod || 'Cash'}</span></td>
+                        <td>
+                            <button class="btn btn-ghost btn-sm" onclick="viewSale('${sale.id}')">👁️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function searchSales() {
+            filterSales();
+        }
+
+        function filterSales() {
+            const query = document.getElementById('saleSearch').value.toLowerCase();
+            const fromDate = document.getElementById('dateFrom').value;
+            const toDate = document.getElementById('dateTo').value;
+            const payment = document.getElementById('paymentFilter').value;
+
+            let filtered = sales.filter(sale => {
+                const matchesSearch = !query || 
+                    sale.customerName?.toLowerCase().includes(query) ||
+                    sale.id.toLowerCase().includes(query);
+
+                const saleDate = sale.createdAt?.toDate?.() || new Date(sale.createdAt);
+                const dateStr = saleDate.toISOString().split('T')[0];
+                const matchesFrom = !fromDate || dateStr >= fromDate;
+                const matchesTo = !toDate || dateStr <= toDate;
+                const matchesPayment = !payment || sale.paymentMethod === payment;
+
+                return matchesSearch && matchesFrom && matchesTo && matchesPayment;
+            });
+
+            renderSales(filtered);
+        }
+
+        function viewSale(saleId) {
+            const sale = sales.find(s => s.id === saleId);
+            if (!sale) return;
+            currentSaleId = saleId;
+
+            const date = sale.createdAt?.toDate?.() || new Date(sale.createdAt);
+            const itemsHtml = (sale.items || []).map(item => `
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                    <div>
+                        <div style="font-weight: 600;">${item.name}</div>
+                        <div style="font-size: 12px; color: var(--gray);">${item.quantity} x ₦${item.price.toLocaleString()}</div>
+                    </div>
+                    <div style="font-weight: 700;">₦${(item.quantity * item.price).toLocaleString()}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('saleDetailContent').innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 14px; color: var(--gray);">Transaction #${sale.id.slice(-6).toUpperCase()}</div>
+                    <div style="font-size: 13px; color: var(--gray);">${date.toLocaleString()}</div>
+                </div>
+                <div style="margin-bottom: 20px;">${itemsHtml}</div>
+                <div style="background: var(--lighter); padding: 16px; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Subtotal</span><span>₦${(sale.subtotal || 0).toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--secondary);">
+                        <span>Discount</span><span>₦${(sale.discount || 0).toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Tax</span><span>₦${(sale.tax || 0).toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800; padding-top: 8px; border-top: 2px solid var(--border);">
+                        <span>Total</span><span>₦${(sale.total || 0).toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: var(--gray);">
+                        <span>Payment</span><span>${sale.paymentMethod?.toUpperCase() || 'CASH'}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--gray);">
+                        <span>Customer</span><span>${sale.customerName || 'Walk-in'}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('saleDetailModal').classList.add('active');
+        }
+
+        function printSaleReceipt() {
+            window.print();
+        }
+
+        function exportSales() {
+            const csv = [
+                ['Date', 'Transaction ID', 'Customer', 'Items', 'Subtotal', 'Discount', 'Tax', 'Total', 'Payment'],
+                ...sales.map(s => {
+                    const date = s.createdAt?.toDate?.() || new Date(s.createdAt);
+                    return [
+                        date.toLocaleString(),
+                        s.id,
+                        s.customerName || 'Walk-in',
+                        (s.items || []).length,
+                        s.subtotal || 0,
+                        s.discount || 0,
+                        s.tax || 0,
+                        s.total || 0,
+                        s.paymentMethod || 'Cash'
+                    ];
+                })
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sales_export_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Sales exported successfully', 'success');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span style="font-size: 20px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+    </script>
+</body>
+</html>

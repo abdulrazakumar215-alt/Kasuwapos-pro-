@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasuwaPOS Pro - Products</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🛒</div>
+                <span class="sidebar-brand">KasuwaPOS</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text" data-i18n="dashboard">Dashboard</span></a></li>
+                <li class="nav-item"><a href="pos.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text" data-i18n="pos">Point of Sale</span></a></li>
+                <li class="nav-item"><a href="products.html" class="nav-link active"><span class="nav-icon">📦</span><span class="nav-text" data-i18n="products">Products</span></a></li>
+                <li class="nav-item"><a href="sales.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text" data-i18n="sales">Sales</span></a></li>
+                <li class="nav-item"><a href="customers.html" class="nav-link" id="customersNav"><span class="nav-icon">👥</span><span class="nav-text" data-i18n="customers">Customers</span></a></li>
+                <li class="nav-item"><a href="reports.html" class="nav-link" id="reportsNav"><span class="nav-icon">📈</span><span class="nav-text" data-i18n="reports">Reports</span></a></li>
+                <li class="nav-item"><a href="settings.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text" data-i18n="settings">Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="shop-info">
+                    <div class="shop-avatar" id="shopAvatar">S</div>
+                    <div>
+                        <div class="shop-name" id="shopName">Loading...</div>
+                        <div class="shop-plan" id="shopPlan">Free</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar" onclick="toggleSidebar()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h1 class="page-title" data-i18n="products">Products</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" onclick="showAddProductModal()">
+                        <span>➕</span> <span data-i18n="addProduct">Add Product</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
+                    <div class="search-box" style="flex: 1; min-width: 250px;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="productSearch" placeholder="Search products..." oninput="searchProducts()">
+                    </div>
+                    <select class="form-select" id="categoryFilter" style="width: auto;" onchange="filterProducts()">
+                        <option value="">All Categories</option>
+                    </select>
+                    <select class="form-select" id="stockFilter" style="width: auto;" onchange="filterProducts()">
+                        <option value="">All Stock</option>
+                        <option value="low">Low Stock</option>
+                        <option value="out">Out of Stock</option>
+                    </select>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="productName">Product</th>
+                                    <th data-i18n="category">Category</th>
+                                    <th data-i18n="price">Price</th>
+                                    <th data-i18n="cost">Cost</th>
+                                    <th data-i18n="stock">Stock</th>
+                                    <th data-i18n="status">Status</th>
+                                    <th data-i18n="actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTable">
+                                <tr><td colspan="7" style="text-align: center; padding: 40px;" data-i18n="loading">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="productModalTitle" data-i18n="addProduct">Add Product</h3>
+                <button class="modal-close" onclick="closeModal('productModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="productName">Product Name *</label>
+                            <input type="text" id="prodName" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="barcode">Barcode</label>
+                            <input type="text" id="prodBarcode" class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="category">Category</label>
+                            <input type="text" id="prodCategory" class="form-input" list="categoryList" placeholder="Type or select category">
+                            <datalist id="categoryList"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="supplier">Supplier</label>
+                            <input type="text" id="prodSupplier" class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="price">Selling Price *</label>
+                            <input type="number" id="prodPrice" class="form-input" required min="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="cost">Cost Price</label>
+                            <input type="number" id="prodCost" class="form-input" min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="quantity">Quantity *</label>
+                            <input type="number" id="prodQuantity" class="form-input" required min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="minStock">Min Stock Alert</label>
+                            <input type="number" id="prodMinStock" class="form-input" min="0" value="5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Product Image (Emoji or URL)</label>
+                        <input type="text" id="prodImage" class="form-input" placeholder="📦 or image URL">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('productModal')" data-i18n="cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProduct()" data-i18n="save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/language.js"></script>
+    <script>
+        let products = [];
+        let editingProductId = null;
+
+        auth.onAuthStateChanged(async user => {
+            if (!user) { window.location.href = 'auth.html'; return; }
+            currentUser = user;
+            await loadUserData();
+            await loadProducts();
+        });
+
+        async function loadUserData() {
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (!userDoc.exists) return;
+            const userData = userDoc.data();
+            const shopDoc = await db.collection('shops').doc(userData.shopId).get();
+            if (!shopDoc.exists) return;
+            currentShop = { id: shopDoc.id, ...shopDoc.data() };
+
+            document.getElementById('shopName').textContent = currentShop.name;
+            document.getElementById('shopAvatar').textContent = currentShop.name.charAt(0).toUpperCase();
+            document.getElementById('shopPlan').textContent = currentShop.subscription?.plan?.toUpperCase() || 'FREE';
+
+            if (!hasPermission('customers')) document.getElementById('customersNav').style.display = 'none';
+            if (!hasPermission('reports')) document.getElementById('reportsNav').style.display = 'none';
+        }
+
+        async function loadProducts() {
+            const snapshot = await db.collection('products')
+                .where('shopId', '==', currentShop.id)
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            products = [];
+            const categories = new Set();
+
+            snapshot.forEach(doc => {
+                const product = { id: doc.id, ...doc.data() };
+                products.push(product);
+                if (product.category) categories.add(product.category);
+            });
+
+            // Update category filter
+            const catSelect = document.getElementById('categoryFilter');
+            catSelect.innerHTML = '<option value="">All Categories</option>';
+            categories.forEach(cat => {
+                catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+
+            // Update datalist
+            const datalist = document.getElementById('categoryList');
+            datalist.innerHTML = '';
+            categories.forEach(cat => {
+                datalist.innerHTML += `<option value="${cat}">`;
+            });
+
+            renderProducts();
+        }
+
+        function renderProducts(filtered = products) {
+            const tbody = document.getElementById('productsTable');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px;" data-i18n="noData">No products found</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(product => {
+                const isLow = product.quantity <= (product.minStock || 5);
+                const isOut = product.quantity <= 0;
+                const statusClass = isOut ? 'badge-danger' : isLow ? 'badge-warning' : 'badge-secondary';
+                const statusText = isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock';
+
+                return `
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 40px; height: 40px; background: var(--lighter); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">${product.image || '📦'}</div>
+                                <div>
+                                    <div style="font-weight: 600;">${product.name}</div>
+                                    <div style="font-size: 12px; color: var(--gray);">${product.barcode || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${product.category || '-'}</td>
+                        <td style="font-weight: 700;">₦${(product.price || 0).toLocaleString()}</td>
+                        <td>₦${(product.cost || 0).toLocaleString()}</td>
+                        <td style="font-weight: 600; ${isLow ? 'color: var(--danger);' : ''}">${product.quantity || 0}</td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-ghost btn-sm" onclick="editProduct('${product.id}')" title="Edit">✏️</button>
+                                <button class="btn btn-ghost btn-sm" onclick="deleteProduct('${product.id}')" title="Delete">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function searchProducts() {
+            const query = document.getElementById('productSearch').value.toLowerCase();
+            filterProducts();
+        }
+
+        function filterProducts() {
+            const query = document.getElementById('productSearch').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const stock = document.getElementById('stockFilter').value;
+
+            let filtered = products.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(query) || p.barcode?.includes(query);
+                const matchesCategory = !category || p.category === category;
+                let matchesStock = true;
+                if (stock === 'low') matchesStock = p.quantity <= (p.minStock || 5) && p.quantity > 0;
+                if (stock === 'out') matchesStock = p.quantity <= 0;
+
+                return matchesSearch && matchesCategory && matchesStock;
+            });
+
+            renderProducts(filtered);
+        }
+
+        function showAddProductModal() {
+            const features = getPlanFeatures(currentShop.subscription?.plan || 'free');
+            const currentCount = products.length;
+
+            if (features.maxProducts !== -1 && currentCount >= features.maxProducts) {
+                showToast(`Product limit reached (${features.maxProducts}). Upgrade your plan.`, 'warning');
+                return;
+            }
+
+            editingProductId = null;
+            document.getElementById('productModalTitle').textContent = t('addProduct');
+            document.getElementById('productForm').reset();
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function editProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            editingProductId = productId;
+            document.getElementById('productModalTitle').textContent = 'Edit Product';
+            document.getElementById('prodName').value = product.name;
+            document.getElementById('prodBarcode').value = product.barcode || '';
+            document.getElementById('prodCategory').value = product.category || '';
+            document.getElementById('prodSupplier').value = product.supplier || '';
+            document.getElementById('prodPrice').value = product.price || '';
+            document.getElementById('prodCost').value = product.cost || '';
+            document.getElementById('prodQuantity').value = product.quantity || '';
+            document.getElementById('prodMinStock').value = product.minStock || 5;
+            document.getElementById('prodImage').value = product.image || '';
+
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        async function saveProduct() {
+            const name = document.getElementById('prodName').value.trim();
+            const price = parseFloat(document.getElementById('prodPrice').value);
+            const quantity = parseInt(document.getElementById('prodQuantity').value);
+
+            if (!name || isNaN(price) || isNaN(quantity)) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+
+            const productData = {
+                shopId: currentShop.id,
+                name: name,
+                barcode: document.getElementById('prodBarcode').value.trim(),
+                category: document.getElementById('prodCategory').value.trim(),
+                supplier: document.getElementById('prodSupplier').value.trim(),
+                price: price,
+                cost: parseFloat(document.getElementById('prodCost').value) || 0,
+                quantity: quantity,
+                minStock: parseInt(document.getElementById('prodMinStock').value) || 5,
+                image: document.getElementById('prodImage').value.trim() || '📦',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                if (editingProductId) {
+                    await db.collection('products').doc(editingProductId).update(productData);
+                    showToast('Product updated successfully', 'success');
+                } else {
+                    productData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    await db.collection('products').add(productData);
+                    showToast('Product added successfully', 'success');
+                }
+
+                closeModal('productModal');
+                await loadProducts();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteProduct(productId) {
+            if (!confirm('Are you sure you want to delete this product?')) return;
+
+            try {
+                await db.collection('products').doc(productId).delete();
+                showToast('Product deleted', 'success');
+                await loadProducts();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span style="font-size: 20px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasuwaPOS Pro - Customers</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🛒</div>
+                <span class="sidebar-brand">KasuwaPOS</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text" data-i18n="dashboard">Dashboard</span></a></li>
+                <li class="nav-item"><a href="pos.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text" data-i18n="pos">Point of Sale</span></a></li>
+                <li class="nav-item"><a href="products.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text" data-i18n="products">Products</span></a></li>
+                <li class="nav-item"><a href="sales.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text" data-i18n="sales">Sales</span></a></li>
+                <li class="nav-item"><a href="customers.html" class="nav-link active"><span class="nav-icon">👥</span><span class="nav-text" data-i18n="customers">Customers</span></a></li>
+                <li class="nav-item"><a href="reports.html" class="nav-link" id="reportsNav"><span class="nav-icon">📈</span><span class="nav-text" data-i18n="reports">Reports</span></a></li>
+                <li class="nav-item"><a href="settings.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text" data-i18n="settings">Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="shop-info">
+                    <div class="shop-avatar" id="shopAvatar">S</div>
+                    <div>
+                        <div class="shop-name" id="shopName">Loading...</div>
+                        <div class="shop-plan" id="shopPlan">Free</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar" onclick="toggleSidebar()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h1 class="page-title" data-i18n="customers">Customers</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" onclick="showAddCustomerModal()">
+                        <span>➕</span> <span data-i18n="addCustomer">Add Customer</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="search-box" style="max-width: 400px; margin-bottom: 24px;">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="customerSearch" placeholder="Search customers..." oninput="searchCustomers()">
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="customerName">Name</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>Visits</th>
+                                    <th>Total Purchases</th>
+                                    <th>Last Purchase</th>
+                                    <th data-i18n="actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customersTable">
+                                <tr><td colspan="7" style="text-align: center; padding: 40px;" data-i18n="loading">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Customer Modal -->
+    <div class="modal-overlay" id="customerModal">
+        <div class="modal" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="addCustomer">Add Customer</h3>
+                <button class="modal-close" onclick="closeModal('customerModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="customerForm">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="customerName">Customer Name *</label>
+                        <input type="text" id="custName" class="form-input" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="phone">Phone</label>
+                            <input type="tel" id="custPhone" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="custEmail" class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="address">Address</label>
+                        <textarea id="custAddress" class="form-textarea" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea id="custNotes" class="form-textarea" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('customerModal')" data-i18n="cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCustomer()" data-i18n="save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/language.js"></script>
+    <script>
+        let customers = [];
+
+        auth.onAuthStateChanged(async user => {
+            if (!user) { window.location.href = 'auth.html'; return; }
+            currentUser = user;
+            await loadUserData();
+
+            const features = getPlanFeatures(currentShop?.subscription?.plan || 'free');
+            if (!features.customers) {
+                showToast('Customer management requires Pro plan or higher', 'warning');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+
+            await loadCustomers();
+        });
+
+        async function loadUserData() {
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (!userDoc.exists) return;
+            const userData = userDoc.data();
+            const shopDoc = await db.collection('shops').doc(userData.shopId).get();
+            if (!shopDoc.exists) return;
+            currentShop = { id: shopDoc.id, ...shopDoc.data() };
+            document.getElementById('shopName').textContent = currentShop.name;
+            document.getElementById('shopAvatar').textContent = currentShop.name.charAt(0).toUpperCase();
+            document.getElementById('shopPlan').textContent = currentShop.subscription?.plan?.toUpperCase() || 'FREE';
+            if (!hasPermission('reports')) document.getElementById('reportsNav').style.display = 'none';
+        }
+
+        async function loadCustomers() {
+            const snapshot = await db.collection('customers')
+                .where('shopId', '==', currentShop.id)
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            customers = [];
+            snapshot.forEach(doc => customers.push({ id: doc.id, ...doc.data() }));
+            renderCustomers();
+        }
+
+        function renderCustomers(filtered = customers) {
+            const tbody = document.getElementById('customersTable');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px;" data-i18n="noData">No customers found</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(customer => {
+                const lastPurchase = customer.lastPurchase?.toDate?.() || (customer.lastPurchase ? new Date(customer.lastPurchase) : null);
+                return `
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 36px; height: 36px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600;">${customer.name.charAt(0).toUpperCase()}</div>
+                                <div style="font-weight: 600;">${customer.name}</div>
+                            </div>
+                        </td>
+                        <td>${customer.phone || '-'}</td>
+                        <td>${customer.email || '-'}</td>
+                        <td>${customer.visitCount || 0}</td>
+                        <td style="font-weight: 700;">₦${(customer.totalPurchases || 0).toLocaleString()}</td>
+                        <td>${lastPurchase ? lastPurchase.toLocaleDateString() : 'Never'}</td>
+                        <td>
+                            <button class="btn btn-ghost btn-sm" onclick="deleteCustomer('${customer.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function searchCustomers() {
+            const query = document.getElementById('customerSearch').value.toLowerCase();
+            const filtered = customers.filter(c => 
+                c.name.toLowerCase().includes(query) ||
+                c.phone?.includes(query) ||
+                c.email?.toLowerCase().includes(query)
+            );
+            renderCustomers(filtered);
+        }
+
+        function showAddCustomerModal() {
+            document.getElementById('customerForm').reset();
+            document.getElementById('customerModal').classList.add('active');
+        }
+
+        async function saveCustomer() {
+            const name = document.getElementById('custName').value.trim();
+            if (!name) {
+                showToast('Customer name is required', 'error');
+                return;
+            }
+
+            try {
+                await db.collection('customers').add({
+                    shopId: currentShop.id,
+                    name: name,
+                    phone: document.getElementById('custPhone').value.trim(),
+                    email: document.getElementById('custEmail').value.trim(),
+                    address: document.getElementById('custAddress').value.trim(),
+                    notes: document.getElementById('custNotes').value.trim(),
+                    totalPurchases: 0,
+                    visitCount: 0,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                closeModal('customerModal');
+                showToast('Customer added successfully', 'success');
+                await loadCustomers();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteCustomer(customerId) {
+            if (!confirm('Delete this customer?')) return;
+            try {
+                await db.collection('customers').doc(customerId).delete();
+                showToast('Customer deleted', 'success');
+                await loadCustomers();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span style="font-size: 20px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+    </script>
+</body>
+</html>

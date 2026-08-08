@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasuwaPOS Pro - Authentication</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div style="font-size: 48px; margin-bottom: 16px;">🛒</div>
+                <h1>KasuwaPOS Pro</h1>
+                <p id="authSubtitle" data-i18n="loginToAccount">Login to your account</p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label class="form-label" data-i18n="email">Email</label>
+                    <input type="email" id="loginEmail" class="form-input" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-i18n="password">Password</label>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;">
+                        <input type="checkbox" id="rememberMe" style="width: 16px; height: 16px;">
+                        <span>Remember me</span>
+                    </label>
+                    <a href="#" onclick="showResetForm()" style="font-size: 14px; color: var(--primary); text-decoration: none;" data-i18n="forgotPassword">Forgot Password?</a>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;" data-i18n="login">Login</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="shopName">Shop Name</label>
+                        <input type="text" id="regShopName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="businessType">Business Type</label>
+                        <select id="regBusinessType" class="form-select">
+                            <option value="retail">Retail Shop</option>
+                            <option value="supermarket">Supermarket</option>
+                            <option value="boutique">Boutique</option>
+                            <option value="pharmacy">Pharmacy</option>
+                            <option value="restaurant">Restaurant</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="email">Email</label>
+                        <input type="email" id="regEmail" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="phone">Phone Number</label>
+                        <input type="tel" id="regPhone" class="form-input" placeholder="+234...">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-i18n="address">Address</label>
+                    <input type="text" id="regAddress" class="form-input">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="password">Password</label>
+                        <input type="password" id="regPassword" class="form-input" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" id="regConfirmPassword" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-i18n="plan">Plan</label>
+                    <select id="regPlan" class="form-select">
+                        <option value="free">Free (₦0/month)</option>
+                        <option value="basic">Basic (₦5,000/month)</option>
+                        <option value="pro">Pro (₦15,000/month)</option>
+                        <option value="enterprise">Enterprise (₦50,000/month)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;" data-i18n="register">Register</button>
+            </form>
+
+            <!-- Reset Password Form -->
+            <form id="resetForm" class="auth-form" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label" data-i18n="email">Email</label>
+                    <input type="email" id="resetEmail" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;" data-i18n="sendReset">Send Reset Link</button>
+                <button type="button" class="btn btn-ghost" style="width: 100%; margin-top: 10px;" onclick="showLoginForm()" data-i18n="backToLogin">Back to Login</button>
+            </form>
+
+            <div class="auth-footer">
+                <p id="authToggleText">
+                    <span data-i18n="noAccount">Don't have an account?</span>
+                    <a href="#" onclick="toggleAuthMode()" data-i18n="register">Register</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/language.js"></script>
+    <script>
+        // Check URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const isRegister = urlParams.get('register') === 'true';
+        const selectedPlan = urlParams.get('plan') || 'free';
+
+        if (isRegister) {
+            showRegisterForm();
+            document.getElementById('regPlan').value = selectedPlan;
+        }
+
+        let isLoginMode = true;
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            if (isLoginMode) {
+                showLoginForm();
+            } else {
+                showRegisterForm();
+            }
+        }
+
+        function showLoginForm() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('resetForm').style.display = 'none';
+            document.getElementById('authSubtitle').textContent = t('loginToAccount');
+            document.getElementById('authToggleText').innerHTML = `<span data-i18n="noAccount">${t('noAccount')}</span> <a href="#" onclick="toggleAuthMode()" data-i18n="register">${t('register')}</a>`;
+            isLoginMode = true;
+        }
+
+        function showRegisterForm() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('resetForm').style.display = 'none';
+            document.getElementById('authSubtitle').textContent = t('createAccount');
+            document.getElementById('authToggleText').innerHTML = `<span data-i18n="alreadyHave">${t('alreadyHave')}</span> <a href="#" onclick="toggleAuthMode()" data-i18n="login">${t('login')}</a>`;
+            isLoginMode = false;
+        }
+
+        function showResetForm() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('resetForm').style.display = 'block';
+            document.getElementById('authSubtitle').textContent = t('resetPassword');
+            document.getElementById('authToggleText').innerHTML = '';
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span style="font-size: 20px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                showToast('Login successful!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+
+        // Register
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+            if (password !== confirmPassword) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // Create shop
+                const shopRef = db.collection('shops').doc();
+                const plan = document.getElementById('regPlan').value;
+                const expiryDate = plan === 'free' ? null : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days trial
+
+                await shopRef.set({
+                    name: document.getElementById('regShopName').value,
+                    businessType: document.getElementById('regBusinessType').value,
+                    phone: document.getElementById('regPhone').value,
+                    address: document.getElementById('regAddress').value,
+                    ownerId: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    subscription: {
+                        plan: plan,
+                        status: plan === 'free' ? 'active' : 'trial',
+                        expiryDate: expiryDate,
+                        startedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    },
+                    staff: {
+                        [user.uid]: {
+                            role: 'owner',
+                            name: email.split('@')[0],
+                            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }
+                    },
+                    settings: {
+                        currency: '₦',
+                        taxRate: 0,
+                        receiptFooter: 'Thank you for your business!'
+                    }
+                });
+
+                // Create user profile
+                await db.collection('users').doc(user.uid).set({
+                    email: email,
+                    shopId: shopRef.id,
+                    role: 'owner',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    language: currentLang
+                });
+
+                showToast('Account created successfully!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+
+        // Reset Password
+        document.getElementById('resetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('resetEmail').value;
+
+            try {
+                await auth.sendPasswordResetEmail(email);
+                showToast('Password reset email sent!', 'success');
+                setTimeout(showLoginForm, 2000);
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+
+        // Auth state listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Already logged in, redirect to dashboard
+                // window.location.href = 'dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>

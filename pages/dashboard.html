@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasuwaPOS Pro - Dashboard</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🛒</div>
+                <span class="sidebar-brand">KasuwaPOS</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="dashboard.html" class="nav-link active">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text" data-i18n="dashboard">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="pos.html" class="nav-link">
+                        <span class="nav-icon">💰</span>
+                        <span class="nav-text" data-i18n="pos">Point of Sale</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="products.html" class="nav-link">
+                        <span class="nav-icon">📦</span>
+                        <span class="nav-text" data-i18n="products">Products</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="sales.html" class="nav-link">
+                        <span class="nav-icon">🛒</span>
+                        <span class="nav-text" data-i18n="sales">Sales</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="customers.html" class="nav-link" id="customersNav">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text" data-i18n="customers">Customers</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="reports.html" class="nav-link" id="reportsNav">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-text" data-i18n="reports">Reports</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="settings.html" class="nav-link">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text" data-i18n="settings">Settings</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="shop-info">
+                    <div class="shop-avatar" id="shopAvatar">S</div>
+                    <div>
+                        <div class="shop-name" id="shopName">Loading...</div>
+                        <div class="shop-plan" id="shopPlan">Free</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar" onclick="toggleSidebar()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h1 class="page-title" data-i18n="dashboard">Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                        <span id="darkModeIcon">🌙</span>
+                    </button>
+                    <button class="header-btn" onclick="showNotifications()">
+                        <span>🔔</span>
+                        <span class="badge" id="notifBadge" style="display: none;">0</span>
+                    </button>
+                    <div class="user-menu" onclick="toggleUserMenu()">
+                        <div class="user-avatar" id="userAvatar">U</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">User</div>
+                            <div class="user-role" id="userRole">Owner</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="content">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon primary">💰</div>
+                        <div class="stat-info">
+                            <h3 id="totalSales">₦0</h3>
+                            <p data-i18n="totalSales">Total Sales</p>
+                            <div class="stat-change up" id="salesChange">+0%</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon secondary">📅</div>
+                        <div class="stat-info">
+                            <h3 id="todaySales">₦0</h3>
+                            <p data-i18n="todaySales">Today's Sales</p>
+                            <div class="stat-change up" id="todayChange">+0%</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon warning">📦</div>
+                        <div class="stat-info">
+                            <h3 id="totalProducts">0</h3>
+                            <p data-i18n="totalProducts">Total Products</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon danger">⚠️</div>
+                        <div class="stat-info">
+                            <h3 id="lowStockCount">0</h3>
+                            <p data-i18n="lowStock">Low Stock</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title" data-i18n="salesReport">Sales Report</h3>
+                            <select class="form-select" style="width: auto;" id="chartPeriod" onchange="updateChart()">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30">Last 30 Days</option>
+                                <option value="90">Last 3 Months</option>
+                            </select>
+                        </div>
+                        <canvas id="salesChart" height="200"></canvas>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Top Products</h3>
+                        </div>
+                        <div id="topProductsList" style="max-height: 300px; overflow-y: auto;">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📊</div>
+                                <p>No data yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Sales -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title" data-i18n="sales">Recent Sales</h3>
+                        <a href="sales.html" class="btn btn-outline btn-sm" data-i18n="view">View All</a>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="transactionId">Transaction ID</th>
+                                    <th data-i18n="date">Date</th>
+                                    <th data-i18n="customer">Customer</th>
+                                    <th data-i18n="items">Items</th>
+                                    <th data-i18n="amount">Amount</th>
+                                    <th data-i18n="payment">Payment</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentSalesTable">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 40px;" data-i18n="loading">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/language.js"></script>
+    <script>
+        // Auth check
+        auth.onAuthStateChanged(async user => {
+            if (!user) {
+                window.location.href = 'auth.html';
+                return;
+            }
+            currentUser = user;
+            await loadUserData();
+            await loadDashboardData();
+        });
+
+        async function loadUserData() {
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (!userDoc.exists) return;
+
+            const userData = userDoc.data();
+            const shopDoc = await db.collection('shops').doc(userData.shopId).get();
+            if (!shopDoc.exists) return;
+
+            currentShop = { id: shopDoc.id, ...shopDoc.data() };
+
+            // Update UI
+            document.getElementById('shopName').textContent = currentShop.name;
+            document.getElementById('shopAvatar').textContent = currentShop.name.charAt(0).toUpperCase();
+            document.getElementById('shopPlan').textContent = currentShop.subscription?.plan?.toUpperCase() || 'FREE';
+            document.getElementById('userName').textContent = currentUser.email.split('@')[0];
+            document.getElementById('userAvatar').textContent = currentUser.email.charAt(0).toUpperCase();
+
+            const staffRole = currentShop.staff?.[currentUser.uid]?.role || 'staff';
+            document.getElementById('userRole').textContent = staffRole.charAt(0).toUpperCase() + staffRole.slice(1);
+
+            // Check permissions
+            if (!hasPermission('customers')) {
+                document.getElementById('customersNav').style.display = 'none';
+            }
+            if (!hasPermission('reports')) {
+                document.getElementById('reportsNav').style.display = 'none';
+            }
+
+            // Check subscription
+            if (!isSubscriptionValid(currentShop)) {
+                showToast('Your subscription has expired. Please renew.', 'warning');
+            }
+        }
+
+        async function loadDashboardData() {
+            const shopId = currentShop.id;
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            // Load sales stats
+            const salesSnapshot = await db.collection('sales')
+                .where('shopId', '==', shopId)
+                .orderBy('createdAt', 'desc')
+                .limit(100)
+                .get();
+
+            let totalSales = 0;
+            let todaySales = 0;
+            const salesByDate = {};
+            const productSales = {};
+
+            salesSnapshot.forEach(doc => {
+                const sale = doc.data();
+                totalSales += sale.total || 0;
+
+                const saleDate = sale.createdAt?.toDate?.() || new Date(sale.createdAt);
+                if (saleDate >= today) {
+                    todaySales += sale.total || 0;
+                }
+
+                const dateKey = saleDate.toISOString().split('T')[0];
+                salesByDate[dateKey] = (salesByDate[dateKey] || 0) + (sale.total || 0);
+
+                // Track product sales
+                (sale.items || []).forEach(item => {
+                    productSales[item.name] = (productSales[item.name] || 0) + (item.quantity || 0);
+                });
+            });
+
+            document.getElementById('totalSales').textContent = '₦' + totalSales.toLocaleString();
+            document.getElementById('todaySales').textContent = '₦' + todaySales.toLocaleString();
+
+            // Load products
+            const productsSnapshot = await db.collection('products')
+                .where('shopId', '==', shopId)
+                .get();
+
+            let totalProducts = 0;
+            let lowStock = 0;
+
+            productsSnapshot.forEach(doc => {
+                const product = doc.data();
+                totalProducts++;
+                if (product.quantity <= (product.minStock || 5)) {
+                    lowStock++;
+                }
+            });
+
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('lowStockCount').textContent = lowStock;
+
+            // Check plan limits
+            const features = getPlanFeatures(currentShop.subscription?.plan || 'free');
+            if (features.maxProducts !== -1 && totalProducts >= features.maxProducts) {
+                showToast('You have reached your product limit. Upgrade your plan.', 'warning');
+            }
+
+            // Update chart
+            updateSalesChart(salesByDate);
+
+            // Update top products
+            updateTopProducts(productSales);
+
+            // Update recent sales table
+            updateRecentSalesTable(salesSnapshot);
+        }
+
+        let salesChart = null;
+
+        function updateSalesChart(salesByDate) {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            const dates = Object.keys(salesByDate).sort().slice(-7);
+            const values = dates.map(d => salesByDate[d] || 0);
+
+            if (salesChart) {
+                salesChart.destroy();
+            }
+
+            salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates.map(d => new Date(d).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Sales (₦)',
+                        data: values,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: value => '₦' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTopProducts(productSales) {
+            const sorted = Object.entries(productSales)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            const container = document.getElementById('topProductsList');
+            if (sorted.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <p>No sales data yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = sorted.map(([name, qty], i) => `
+                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border);">
+                    <div style="width: 32px; height: 32px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">${i + 1}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 14px;">${name}</div>
+                        <div style="font-size: 12px; color: var(--gray);">${qty} sold</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateRecentSalesTable(salesSnapshot) {
+            const tbody = document.getElementById('recentSalesTable');
+            const sales = [];
+            salesSnapshot.forEach(doc => {
+                sales.push({ id: doc.id, ...doc.data() });
+            });
+
+            if (sales.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 40px;" data-i18n="noData">No data available</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = sales.slice(0, 10).map(sale => {
+                const date = sale.createdAt?.toDate?.() || new Date(sale.createdAt);
+                return `
+                    <tr>
+                        <td><span class="badge badge-gray">#${sale.id.slice(-6).toUpperCase()}</span></td>
+                        <td>${date.toLocaleDateString()}</td>
+                        <td>${sale.customerName || 'Walk-in'}</td>
+                        <td>${(sale.items || []).length} items</td>
+                        <td style="font-weight: 700;">₦${(sale.total || 0).toLocaleString()}</td>
+                        <td><span class="badge badge-primary">${sale.paymentMethod || 'Cash'}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            document.getElementById('darkModeIcon').textContent = isDark ? '🌙' : '☀️';
+            localStorage.setItem('pos_dark_mode', !isDark);
+        }
+
+        function showNotifications() {
+            showToast('No new notifications', 'info');
+        }
+
+        function toggleUserMenu() {
+            if (confirm(t('logout') + '?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'auth.html';
+                });
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span style="font-size: 20px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Load dark mode preference
+        if (localStorage.getItem('pos_dark_mode') === 'true') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.getElementById('darkModeIcon').textContent = '☀️';
+        }
+    </script>
+</body>
+</html>

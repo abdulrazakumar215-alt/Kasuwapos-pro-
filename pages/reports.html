@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasuwaPOS Pro - Reports</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🛒</div>
+                <span class="sidebar-brand">KasuwaPOS</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text" data-i18n="dashboard">Dashboard</span></a></li>
+                <li class="nav-item"><a href="pos.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text" data-i18n="pos">Point of Sale</span></a></li>
+                <li class="nav-item"><a href="products.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text" data-i18n="products">Products</span></a></li>
+                <li class="nav-item"><a href="sales.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text" data-i18n="sales">Sales</span></a></li>
+                <li class="nav-item"><a href="customers.html" class="nav-link" id="customersNav"><span class="nav-icon">👥</span><span class="nav-text" data-i18n="customers">Customers</span></a></li>
+                <li class="nav-item"><a href="reports.html" class="nav-link active"><span class="nav-icon">📈</span><span class="nav-text" data-i18n="reports">Reports</span></a></li>
+                <li class="nav-item"><a href="settings.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text" data-i18n="settings">Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="shop-info">
+                    <div class="shop-avatar" id="shopAvatar">S</div>
+                    <div>
+                        <div class="shop-name" id="shopName">Loading...</div>
+                        <div class="shop-plan" id="shopPlan">Free</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar" onclick="toggleSidebar()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h1 class="page-title" data-i18n="reports">Reports</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-outline" onclick="exportReport()">
+                        <span>📥</span> <span data-i18n="export">Export</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
+                    <select class="form-select" id="reportType" style="width: auto;" onchange="updateReport()">
+                        <option value="sales">Sales Report</option>
+                        <option value="inventory">Inventory Report</option>
+                        <option value="profit">Profit Report</option>
+                    </select>
+                    <select class="form-select" id="reportPeriod" style="width: auto;" onchange="updateReport()">
+                        <option value="daily" data-i18n="daily">Daily</option>
+                        <option value="weekly" data-i18n="weekly">Weekly</option>
+                        <option value="monthly" data-i18n="monthly">Monthly</option>
+                        <option value="yearly" data-i18n="yearly">Yearly</option>
+                    </select>
+                    <input type="date" id="reportFrom" class="form-input" style="width: auto;" onchange="updateReport()">
+                    <input type="date" id="reportTo" class="form-input" style="width: auto;" onchange="updateReport()">
+                </div>
+
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon primary">💰</div>
+                        <div class="stat-info">
+                            <h3 id="reportTotalSales">₦0</h3>
+                            <p>Total Sales</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon secondary">📦</div>
+                        <div class="stat-info">
+                            <h3 id="reportTotalItems">0</h3>
+                            <p>Items Sold</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon warning">📊</div>
+                        <div class="stat-info">
+                            <h3 id="reportTotalTransactions">0</h3>
+                            <p>Transactions</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon danger">💵</div>
+                        <div class="stat-info">
+                            <h3 id="reportTotalProfit">₦0</h3>
+                            <p>Profit</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <canvas id="reportChart" height="100"></canvas>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Transactions</th>
+                                    <th>Items</th>
+                                    <th>Sales</th>
+                                    <th>Cost</th>
+                                    <th>Profit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTable">
+                                <tr><td colspan="6" style="text-align: center; padding: 40px;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/language.js"></script>
+    <script>
+        let reportChart = null;
+        let reportData = [];
+
+        auth.onAuthStateChanged(async user => {
+            if (!user) { window.location.href = 'auth.html'; return; }
+            currentUser = user;
+            await loadUserData();
+
+            const features = getPlanFeatures(currentShop?.subscription?.plan || 'free');
+            if (!features.reports) {
+                showToast('Reports require Basic plan or higher', 'warning');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+
+            const today = new Date();
+            document.getElementById('reportTo').value = today.toISOString().split('T')[0];
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+            document.getElementById('reportFrom').value = lastMonth.toISOString().split('T')[0];
+
+            await updateReport();
+        });
+
+        async function loadUserData() {
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (!userDoc.exists) return;
+            const userData = userDoc.data();
+            const shopDoc = await db.collection('shops').doc(userData.shopId).get();
+            if (!shopDoc.exists) return;
+            currentShop = { id: shopDoc.id, ...shopDoc.data() };
+            document.getElementById('shopName').textContent = currentShop.name;
+            document.getElementById('shopAvatar').textContent = currentShop.name.charAt(0).toUpperCase();
+            document.getElementById('shopPlan').textContent = currentShop.subscription?.plan?.toUpperCase() || 'FREE';
+            if (!hasPermission('customers')) document.getElementById('customersNav').style.display = 'none';
+        }
+
+        async function updateReport() {
+            const fromDate = new Date(document.getElementById('reportFrom').value);
+            const toDate = new Date(document.getElementById('reportTo').value);
+            toDate.setHours(23, 59, 59, 999);
+
+            const snapshot = await db.collection('sales')
+                .where('shopId', '==', currentShop.id)
+                .where('createdAt', '>=', fromDate)
+                .where('createdAt', '<=', toDate)
+                .orderBy('createdAt', 'asc')
+                .get();
+
+            reportData = [];
+            snapshot.forEach(doc => reportData.push({ id: doc.id, ...doc.data() }));
+
+            let totalSales = 0, totalItems = 0, totalTransactions = reportData.length, totalProfit = 0;
+            const dailyData = {};
+
+            reportData.forEach(sale => {
+                totalSales += sale.total || 0;
+                totalItems += (sale.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+                const saleCost = (sale.items || []).reduce((sum, item) => sum + ((item.cost || 0) * (item.quantity || 0)), 0);
+                totalProfit += (sale.total || 0) - saleCost - (sale.discount || 0);
+
+                const date = sale.createdAt?.toDate?.() || new Date(sale.createdAt);
+                const dateKey = date.toISOString().split('T')[0];
+
+                if (!dailyData[dateKey]) {
+                    dailyData[dateKey] = { sales: 0, items: 0, transactions: 0, cost: 0, profit: 0 };
+                }
+                dailyData[dateKey].sales += sale.total || 0;
+                dailyData[dateKey].items += (sale.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+                dailyData[dateKey].transactions += 1;
+                dailyData[dateKey].cost += saleCost;
+                dailyData[dateKey].profit += (sale.total || 0) - saleCost - (sale.discount || 0);
+            });
+
+            document.getElementById('reportTotalSales').textContent = '₦' + totalSales.toLocaleString();
+            document.getElementById('reportTotalItems').textContent = totalItems.toLocaleString();
+            document.getElementById('reportTotalTransactions').textContent = totalTransactions.toLocaleString();
+            document.getElementById('reportTotalProfit').textContent = '₦' + totalProfit.toLocaleString();
+
+            const dates = Object.keys(dailyData).sort();
+            const ctx = document.getElementById('reportChart').getContext('2d');
+
+            if (reportChart) reportChart.destroy();
+
+            reportChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dates.map(d => new Date(d).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Sales (₦)',
+                        data: dates.map(d => dailyData[d].sales),
+                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                        borderRadius: 6
+                    }, {
+                        label: 'Profit (₦)',
+                        data: dates.map(d => dailyData[d].profit),
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: v => '₦' + v.toLocaleString() } }
+                    }
+                }
+            });
+
+            const tbody = document.getElementById('reportTable');
+            tbody.innerHTML = dates.reverse().map(date => {
+                const d = dailyData[date];
+                return `
+                    <tr>
+                        <td>${new Date(date).toLocaleDateString()}</td>
+                        <td>${d.transactions}</td>
+                        <td>${d.items}</td>
+                        <td style="font-weight: 700;">₦${d.sales.toLocaleString()}</td>
+                        <td>₦${d.cost.toLocaleString()}</td>
+                        <td style="color: var(--secondary); font-weight: 700;">₦${d.profit.toLocaleString()}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function exportReport() {
+            const csv = [
+                ['Date', 'Transactions', 'Items', 'Sales', 'Cost', 'Profit'],
+                ...reportData.map(s => {
+                    const date = s.createdAt?.toDate?.() || new Date(s.createdAt);
+                    return [date.toLocaleString(), s.id, (s.items || []).length, s.total || 0, s.subtotal || 0, (s.total || 0) - (s.subtotal || 0)];
+                })
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report_export_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Report exported successfully', 'success');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span style="font-size: 20px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+    </script>
+</body>
+</html>
